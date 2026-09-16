@@ -1,19 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { RoadmapParams, RoadmapResponse } from '@it-roadmap/models';
 import { buildRoadmapPrompt } from './prompt.builder';
 
 @Injectable()
 export class GeminiProvider {
   private readonly logger = new Logger(GeminiProvider.name);
-  private readonly model;
+  private readonly apiKey: string;
+  private readonly baseUrl = 'https://openrouter.ai/api/v1';
 
   constructor() {
-    const genAI = new GoogleGenerativeAI(process.env['GEMINI_API_KEY'] ?? '');
-    this.model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      tools: [{ googleSearch: {} }],
-    } as any);
+    this.apiKey = process.env['OPENROUTER_API_KEY'] ?? '';
   }
 
   async generateRoadmap(params: RoadmapParams): Promise<RoadmapResponse> {
@@ -21,17 +17,35 @@ export class GeminiProvider {
 
     this.logger.log(`Generando roadmap para: ${params.language} - ${params.objective}`);
 
-    const result = await this.model.generateContent(prompt);
-    const text = result.response.text();
-
-    this.logger.log('Respuesta recibida de Gemini');
-
     try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'http://localhost:4200',
+          'X-Title': 'IT Roadmap AI',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.0-flash-exp:free',
+          messages: [{ role: 'user', content: prompt }],
+          plugins: [{ id: 'web' }],
+        }),
+      });
+
+      const rawText = await response.text();
+      this.logger.log('Raw response: ' + rawText);
+      const data = JSON.parse(rawText) as any;
+      const text = data.choices?.[0]?.message?.content ?? '';
+
+      this.logger.log('Texto recibido: ' + text);
+
       const cleaned = text.replace(/```json|```/g, '').trim();
       return JSON.parse(cleaned) as RoadmapResponse;
-    } catch {
-      this.logger.error('Error parseando JSON de Gemini:', text);
-      throw new Error('La IA no devolvió un JSON válido');
+
+    } catch (error) {
+      this.logger.error('Error completo:', error);
+      throw new Error('Error llamando a OpenRouter: ' + error);
     }
   }
 }
