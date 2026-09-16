@@ -23,7 +23,11 @@
       "@org/shop/feature-products": [
         "./packages/shop/feature-products/src/index.ts"
       ],
-      "@org/shop/shared-ui": ["./packages/shop/shared-ui/src/index.ts"]
+      "@org/shop/shared-ui": ["./packages/shop/shared-ui/src/index.ts"],
+      "@it-roadmap/models": ["./libs/shared/models/src/index.ts"],
+      "@it-roadmap/data-access": ["./libs/web/data-access/src/index.ts"],
+      "@it-roadmap/ui": ["./libs/web/ui/src/index.ts"],
+      "@it-roadmap/feature-roadmap": ["./libs/web/feature-roadmap/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
